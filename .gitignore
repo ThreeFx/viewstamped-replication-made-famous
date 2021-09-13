@@ -1,3 +1,6 @@
 .DS_Store
 simulator
 zig
+src/zig-cache
+interesting_seeds
+logs
