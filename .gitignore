@@ -6,3 +6,5 @@ src/zig-cache
 #Project Files
 .idea
 *.iml
+interesting_seeds
+logs
