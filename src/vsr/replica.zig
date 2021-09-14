@@ -488,6 +488,14 @@ pub fn Replica(
             if (message.header.client > 0) {
                 assert(message.header.replica == 0);
 
+                // Clients implicitly trust pong responses by all replicas.
+                // This may cause clients to learn a premature view from a
+                // replica doing an unsuccessful view change, denying them the
+                // ability to send requests to the main cluster. By only
+                // replying to client's ping messages when our state is normal
+                // we prevent the client learning premature view numbers.
+                if (self.status == .view_change) return;
+
                 self.send_header_to_client(message.header.client, pong);
             } else if (message.header.replica == self.replica) {
                 log.warn("{}: on_ping: ignoring (self)", .{self.replica});
