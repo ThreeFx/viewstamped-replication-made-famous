@@ -278,55 +278,34 @@ pub const Storage = struct {
         comptime assert(config.message_size_max % config.sector_size == 0);
         const message_size_max = config.message_size_max;
 
+        //var i: usize = 0;
+        //while (i < config.replicas_max) : (i += 1) {
+        //    out[i] = .{ .first_offset = i, .period = config.replicas_max };
+        //}
+
+        var i: usize = 0;
+
         // We need to ensure there is message_size_max fault-free padding
         // between faulty areas of memory so that a single message
         // cannot straddle the corruptable areas of a majority of replicas.
-        switch (replica_count) {
-            1 => {
-                // If there is only one replica in the cluster, storage faults are not recoverable.
-                out[0] = .{ .first_offset = size, .period = 1 };
-            },
-            2 => {
-                //  0123456789
-                // 0X   X   X
-                // 1  X   X   X
-                out[0] = .{ .first_offset = 0 * message_size_max, .period = 4 * message_size_max };
-                out[1] = .{ .first_offset = 2 * message_size_max, .period = 4 * message_size_max };
-            },
-            3 => {
-                //  0123456789
-                // 0X     X
-                // 1  X     X
-                // 2    X     X
-                out[0] = .{ .first_offset = 0 * message_size_max, .period = 6 * message_size_max };
-                out[1] = .{ .first_offset = 2 * message_size_max, .period = 6 * message_size_max };
-                out[2] = .{ .first_offset = 4 * message_size_max, .period = 6 * message_size_max };
-            },
-            4 => {
-                //  0123456789
-                // 0X   X   X
-                // 1X   X   X
-                // 2  X   X   X
-                // 3  X   X   X
-                out[0] = .{ .first_offset = 0 * message_size_max, .period = 4 * message_size_max };
-                out[1] = .{ .first_offset = 0 * message_size_max, .period = 4 * message_size_max };
-                out[2] = .{ .first_offset = 2 * message_size_max, .period = 4 * message_size_max };
-                out[3] = .{ .first_offset = 2 * message_size_max, .period = 4 * message_size_max };
-            },
-            5 => {
-                //  0123456789
-                // 0X     X
-                // 1X     X
-                // 2  X     X
-                // 3  X     X
-                // 4    X     X
-                out[0] = .{ .first_offset = 0 * message_size_max, .period = 6 * message_size_max };
-                out[1] = .{ .first_offset = 0 * message_size_max, .period = 6 * message_size_max };
-                out[2] = .{ .first_offset = 2 * message_size_max, .period = 6 * message_size_max };
-                out[3] = .{ .first_offset = 2 * message_size_max, .period = 6 * message_size_max };
-                out[4] = .{ .first_offset = 4 * message_size_max, .period = 6 * message_size_max };
-            },
-            else => unreachable,
+        while (i < config.replicas_max) : (i += 3) {
+            //  0123456789
+            // 0X     X
+            // 1  X     X
+            // 2    X     X
+            // 3X     X
+            // 4  X     X
+            // 5    X     X
+            // ...
+            out[i] = .{ .first_offset = 0 * message_size_max, .period = 6 * message_size_max };
+
+            if (i + 1 < config.replicas_max) {
+                out[i + 1] = .{ .first_offset = 2 * message_size_max, .period = 6 * message_size_max };
+            }
+
+            if (i + 2 < config.replicas_max) {
+                out[i + 2] = .{ .first_offset = 4 * message_size_max, .period = 6 * message_size_max };
+            }
         }
 
         prng.shuffle(FaultyAreas, out[0..replica_count]);
