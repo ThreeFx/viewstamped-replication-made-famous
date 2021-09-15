@@ -244,13 +244,25 @@ pub fn PacketSimulator(comptime Packet: type) type {
             while (from < self.options.node_count) : (from += 1) {
                 var to: u8 = 0;
                 while (to < self.options.node_count) : (to += 1) {
-                    const path = .{ .source = from, .target = to };
+                    var path = .{ .source = from, .target = to };
                     if (self.is_clogged(path)) continue;
 
                     const queue = self.path_queue(path);
                     while (queue.peek()) |*data| {
                         if (data.expiry > self.ticks) break;
                         _ = queue.remove();
+
+                        const is_misdeliver = self.options.node_count > 1 and self.should_misdeliver();
+                        var orig_to: u8 = self.options.node_count;
+                        if (is_misdeliver) {
+                            orig_to = to;
+                            to = self.prng.random.uintLessThan(u8, self.options.node_count - 1);
+                            if (to >= orig_to) to += 1;
+                            assert(to < self.options.node_count and to != orig_to);
+
+                            path.target = to;
+                            log.debug("misrouting packet from={} orig_to={} new_to={}", .{ from, orig_to, to });
+                        }
 
                         if (self.is_partitioned) {
                             if (from < self.options.replica_count and to < self.options.replica_count and self.partition[from] != self.partition[to]) {
@@ -273,22 +285,16 @@ pub fn PacketSimulator(comptime Packet: type) type {
                             self.stats[@enumToInt(PacketStatistics.replay)] += 1;
 
                             data.callback(data.packet, path);
-                        } else if (self.options.node_count > 1 and self.should_misdeliver()) {
-                            const orig_to = path.target;
-                            var new_to = self.prng.random.uintLessThan(u8, self.options.node_count - 1);
-                            if (new_to >= orig_to) new_to += 1;
-                            assert(new_to < self.options.node_count and new_to != orig_to);
-
-                            const new_path = Path{ .source = path.source, .target = new_to };
-                            log.debug("misdelivering packet from={} orig_to={} new_to={}", .{ from, orig_to, new_to });
-                            data.callback(data.packet, new_path);
-
-                            // only source matters here
-                            data.packet.deinit(path);
                         } else {
                             log.debug("delivering packet from={} to={}", .{ from, to });
                             data.callback(data.packet, path);
                             data.packet.deinit(path);
+                        }
+
+                        if (is_misdeliver) {
+                            assert(orig_to < self.options.node_count);
+                            to = orig_to;
+                            path.target = to;
                         }
                     }
 
