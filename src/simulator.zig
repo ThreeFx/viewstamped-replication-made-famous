@@ -92,6 +92,7 @@ pub fn main() !void {
                 .path_clog_duration_mean = prng.random.uintLessThan(u16, 500),
                 .path_clog_probability = prng.random.uintLessThan(u8, 2),
                 .packet_replay_probability = prng.random.uintLessThan(u8, 50),
+                .packet_misdeliver_probability = prng.random.uintLessThan(u8, 10),
             },
         },
         .storage_options = .{
@@ -130,6 +131,7 @@ pub fn main() !void {
         \\          path_clog_duration_mean={} ticks
         \\          path_clog_probability={}%
         \\          packet_replay_probability={}%
+        \\          packet_misdeliver_probability={}%
         \\          partition_mode = {},
         \\          partition_probability = {}%,
         \\          unpartition_probability = {}%,
@@ -155,6 +157,7 @@ pub fn main() !void {
         cluster.options.network_options.packet_simulator_options.path_clog_duration_mean,
         cluster.options.network_options.packet_simulator_options.path_clog_probability,
         cluster.options.network_options.packet_simulator_options.packet_replay_probability,
+        cluster.options.network_options.packet_simulator_options.packet_misdeliver_probability,
 
         cluster.options.network_options.packet_simulator_options.partition_mode,
         cluster.options.network_options.packet_simulator_options.partition_probability,

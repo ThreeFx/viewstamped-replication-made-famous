@@ -11,6 +11,7 @@ pub const PacketSimulatorOptions = struct {
 
     packet_loss_probability: u8,
     packet_replay_probability: u8,
+    packet_misdeliver_probability: u8,
     seed: u64,
 
     replica_count: u8,
@@ -164,6 +165,10 @@ pub fn PacketSimulator(comptime Packet: type) type {
             return self.prng.random.uintAtMost(u8, 100) < self.options.packet_replay_probability;
         }
 
+        fn should_misdeliver(self: *Self) bool {
+            return self.prng.random.uintAtMost(u8, 100) < self.options.packet_misdeliver_probability;
+        }
+
         /// Return a value produced using an exponential distribution with
         /// the minimum and mean specified in self.options
         fn one_way_delay(self: *Self) u64 {
@@ -261,15 +266,25 @@ pub fn PacketSimulator(comptime Packet: type) type {
                             log.alert("dropped packet from={} to={}.", .{ from, to });
                             data.packet.deinit(path);
                             continue;
-                        }
-
-                        if (self.should_replay()) {
+                        } else if (self.should_replay()) {
                             self.submit_packet(data.packet, data.callback, path);
 
                             log.debug("replayed packet from={} to={}", .{ from, to });
                             self.stats[@enumToInt(PacketStatistics.replay)] += 1;
 
                             data.callback(data.packet, path);
+                        } else if (self.options.node_count > 1 and self.should_misdeliver()) {
+                            const orig_to = path.target;
+                            var new_to = self.prng.random.uintLessThan(u8, self.options.node_count - 1);
+                            if (new_to >= orig_to) new_to += 1;
+                            assert(new_to < self.options.node_count and new_to != orig_to);
+
+                            const new_path = Path{ .source = path.source, .target = new_to };
+                            log.debug("misdelivering packet from={} orig_to={} new_to={}", .{ from, orig_to, new_to });
+                            data.callback(data.packet, new_path);
+
+                            // only source matters here
+                            data.packet.deinit(path);
                         } else {
                             log.debug("delivering packet from={} to={}", .{ from, to });
                             data.callback(data.packet, path);
