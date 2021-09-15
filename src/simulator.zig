@@ -80,20 +80,23 @@ pub fn main() !void {
                 .client_count = client_count,
                 .node_count = node_count,
 
-                .seed = random.int(u64),
-                .one_way_delay_mean = 3 + random.uintLessThan(u16, 10),
-                .one_way_delay_min = random.uintLessThan(u16, 3),
-                .packet_loss_probability = random.uintLessThan(u8, 30),
-                .path_maximum_capacity = 2 + random.uintLessThan(u8, 19),
-                .path_clog_duration_mean = random.uintLessThan(u16, 500),
-                .path_clog_probability = random.uintLessThan(u8, 2),
-                .packet_replay_probability = random.uintLessThan(u8, 50),
+                .seed = prng.random.int(u64),
+                .one_way_delay_mean = 3 + prng.random.uintLessThan(u16, 10),
+                .one_way_delay_min = prng.random.uintLessThan(u16, 3),
+                .packet_loss_probability = prng.random.uintLessThan(u8, 30),
 
                 .partition_mode = random_partition_mode(random),
-                .partition_probability = random.uintLessThan(u8, 3),
-                .unpartition_probability = 1 + random.uintLessThan(u8, 10),
-                .partition_stability = 100 + random.uintLessThan(u32, 100),
-                .unpartition_stability = random.uintLessThan(u32, 20),
+                .partition_probability = prng.random.uintLessThan(u8, 3),
+                .unpartition_probability = 1 + prng.random.uintLessThan(u8, 10),
+                .partition_stability = 100 + prng.random.uintLessThan(u32, 100),
+                .unpartition_stability = prng.random.uintLessThan(u32, 20),
+
+                .path_maximum_capacity = 20 + prng.random.uintLessThan(u8, 20),
+                .path_clog_duration_mean = prng.random.uintLessThan(u16, 500),
+                .path_clog_probability = prng.random.uintLessThan(u8, 2),
+                .packet_replay_probability = prng.random.uintLessThan(u8, 50),
+
+                .packet_misdeliver_probability = prng.random.uintLessThan(u8, 10),
             },
         },
         .storage_options = .{
@@ -137,6 +140,7 @@ pub fn main() !void {
         \\          unpartition_probability={}%
         \\          partition_stability={} ticks
         \\          unpartition_stability={} ticks
+        \\          packet_misdeliver_probability={}%
         \\          read_latency_min={}
         \\          read_latency_mean={}
         \\          write_latency_min={}
@@ -158,11 +162,15 @@ pub fn main() !void {
         cluster.options.network_options.packet_simulator_options.path_clog_duration_mean,
         cluster.options.network_options.packet_simulator_options.path_clog_probability,
         cluster.options.network_options.packet_simulator_options.packet_replay_probability,
+
+        cluster.options.network_options.packet_simulator_options.packet_misdeliver_probability,
+
         cluster.options.network_options.packet_simulator_options.partition_mode,
         cluster.options.network_options.packet_simulator_options.partition_probability,
         cluster.options.network_options.packet_simulator_options.unpartition_probability,
         cluster.options.network_options.packet_simulator_options.partition_stability,
         cluster.options.network_options.packet_simulator_options.unpartition_stability,
+
         cluster.options.storage_options.read_latency_min,
         cluster.options.storage_options.read_latency_mean,
         cluster.options.storage_options.write_latency_min,
