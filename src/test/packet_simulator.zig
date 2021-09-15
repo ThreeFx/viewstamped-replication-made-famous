@@ -41,6 +41,7 @@ pub const PartitionMode = enum {
     uniform_size,
     uniform_partition,
     isolate_single,
+    fixed,
 };
 
 /// A fully connected network of nodes used for testing. Simulates the fault model:
@@ -206,6 +207,15 @@ pub fn PacketSimulator(comptime Packet: type) type {
                     }
                     const n = self.prng.random.uintLessThan(u8, self.options.replica_count);
                     self.partition[n] = true;
+                },
+                .fixed => {
+                    // XXX: You can make this do anything you want
+                    var i: usize = 0;
+                    while (i < self.replicas.len) : (i += 3) {
+                        self.partition[i] = false;
+                        if (i + 1 < self.replicas.len) self.partition[i + 1] = true;
+                        if (i + 2 < self.replicas.len) self.partition[i + 2] = true;
+                    }
                 },
             }
         }

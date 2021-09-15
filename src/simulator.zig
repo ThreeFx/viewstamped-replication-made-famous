@@ -10,6 +10,7 @@ const Header = @import("vsr.zig").Header;
 const Replica = @import("test/cluster.zig").Replica;
 const StateChecker = @import("test/state_checker.zig").StateChecker;
 const StateMachine = @import("test/cluster.zig").StateMachine;
+const PartitionMode = @import("test/packet_simulator.zig").PartitionMode;
 
 /// The `log` namespace in this root file is required to implement our custom `log` function.
 const output = std.log.scoped(.state_checker);
@@ -83,11 +84,11 @@ pub fn main() !void {
                 .packet_loss_probability = prng.random.uintLessThan(u8, 30),
                 .path_maximum_capacity = 20 + prng.random.uintLessThan(u8, 20),
 
-                .partition_mode = .uniform_size,
-                .partition_probability = 100,
-                .unpartition_probability = 1,
-                .partition_stability = 1_000_000,
-                .unpartition_stability = 0,
+                .partition_mode = random_enum(.uniform_size),
+                .partition_probability = prng.random.uintLessThan(u8, 3),
+                .unpartition_probability = 1 + prng.random.uintLessThan(u8, 10),
+                .partition_stability = 100 + prng.random.uintLessThan(u32, 100),
+                .unpartition_stability = prng.random.uintLessThan(u32, 20),
 
                 .path_clog_duration_mean = prng.random.uintLessThan(u16, 500),
                 .path_clog_probability = prng.random.uintLessThan(u8, 2),
@@ -283,6 +284,12 @@ fn client_callback(
     results: Client.Error![]const u8,
 ) void {
     assert(user_data == 0);
+}
+
+fn random_enum(comptime EnumType: type, random: *std.rand.Random) EnumType {
+    const typeInfo = @typeInfo(EnumType).Enum;
+    const enumAsInt = random.uintAtMost(typeInfo.tag_type, typeInfo.fields.len - 1);
+    return @intToEnum(EnumType, enumAsInt);
 }
 
 fn parse_seed(bytes: []const u8) u64 {
