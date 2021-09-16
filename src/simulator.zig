@@ -58,14 +58,14 @@ pub fn main() !void {
     var prng = std.rand.DefaultPrng.init(seed);
     const random = &prng.random;
 
-    const replica_count = 1 + prng.random.uintLessThan(u8, config.replicas_max);
-    const client_count = 1 + prng.random.uintLessThan(u8, config.clients_max);
+    const replica_count = config.replicas_max; //1 + prng.random.uintLessThan(u8, config.replicas_max);
+    const client_count = config.clients_max; //1 + prng.random.uintLessThan(u8, config.clients_max);
     const node_count = replica_count + client_count;
 
     const ticks_max = 100_000_000;
     const transitions_max = config.journal_size_max / config.message_size_max;
-    const request_probability = 1 + prng.random.uintLessThan(u8, 99);
-    const idle_on_probability = prng.random.uintLessThan(u8, 20);
+    const request_probability = 1; //1 + prng.random.uintLessThan(u8, 99);
+    const idle_on_probability = 0; //prng.random.uintLessThan(u8, 20);
     const idle_off_probability = 10 + prng.random.uintLessThan(u8, 10);
 
     cluster = try Cluster.create(allocator, &prng.random, .{
@@ -79,31 +79,32 @@ pub fn main() !void {
                 .client_count = client_count,
                 .node_count = node_count,
                 .seed = prng.random.int(u64),
-                .one_way_delay_mean = 3 + prng.random.uintLessThan(u16, 10),
-                .one_way_delay_min = prng.random.uintLessThan(u16, 3),
-                .packet_loss_probability = prng.random.uintLessThan(u8, 30),
-                .path_maximum_capacity = 20 + prng.random.uintLessThan(u8, 20),
 
-                .partition_mode = random_enum(.uniform_size),
-                .partition_probability = prng.random.uintLessThan(u8, 3),
-                .unpartition_probability = 1 + prng.random.uintLessThan(u8, 10),
-                .partition_stability = 100 + prng.random.uintLessThan(u32, 100),
-                .unpartition_stability = prng.random.uintLessThan(u32, 20),
+                .one_way_delay_mean = 5, //3 + prng.random.uintLessThan(u16, 100),
+                .one_way_delay_min = 1, //prng.random.uintLessThan(u16, 3),
+                .packet_loss_probability = 0, //prng.random.uintLessThan(u8, 30),
+                .path_maximum_capacity = 250, //20 + prng.random.uintLessThan(u8, 20),
+
+                .partition_mode = .fixed, //random_enum(PartitionMode, random),
+                .partition_probability = 100, //prng.random.uintLessThan(u8, 3),
+                .unpartition_probability = 100, //1 + prng.random.uintLessThan(u8, 10),
+                .partition_stability = 10_000, //100 + prng.random.uintLessThan(u32, 100),
+                .unpartition_stability = 800, //prng.random.uintLessThan(u32, 20),
 
                 .path_clog_duration_mean = prng.random.uintLessThan(u16, 500),
-                .path_clog_probability = prng.random.uintLessThan(u8, 2),
-                .packet_replay_probability = prng.random.uintLessThan(u8, 50),
-                .packet_misdeliver_probability = prng.random.uintLessThan(u8, 10),
+                .path_clog_probability = 0, //prng.random.uintLessThan(u8, 2),
+                .packet_replay_probability = 0, //prng.random.uintLessThan(u8, 50),
+                .packet_misdeliver_probability = 0, //prng.random.uintLessThan(u8, 10),
             },
         },
         .storage_options = .{
             .seed = prng.random.int(u64),
-            .read_latency_min = prng.random.uintLessThan(u16, 3),
-            .read_latency_mean = 3 + prng.random.uintLessThan(u16, 10),
-            .write_latency_min = prng.random.uintLessThan(u16, 3),
-            .write_latency_mean = 3 + prng.random.uintLessThan(u16, 10),
-            .read_fault_probability = prng.random.uintLessThan(u8, 10),
-            .write_fault_probability = prng.random.uintLessThan(u8, 10),
+            .read_latency_min = 0, //prng.random.uintLessThan(u16, 3),
+            .read_latency_mean = 0, //3 + prng.random.uintLessThan(u16, 10),
+            .write_latency_min = 0, //prng.random.uintLessThan(u16, 3),
+            .write_latency_mean = 0, //3 + prng.random.uintLessThan(u16, 10),
+            .read_fault_probability = 0, //prng.random.uintLessThan(u8, 10),
+            .write_fault_probability = 80, //prng.random.uintLessThan(u8, 10),
         },
     });
     defer cluster.destroy();
@@ -137,6 +138,7 @@ pub fn main() !void {
         \\          partition_probability = {}%,
         \\          unpartition_probability = {}%,
         \\          partition_stability = {} ticks,
+        \\          unpartition_stability = {} ticks,
         \\          read_latency_min={}
         \\          read_latency_mean={}
         \\          write_latency_min={}
@@ -164,6 +166,7 @@ pub fn main() !void {
         cluster.options.network_options.packet_simulator_options.partition_probability,
         cluster.options.network_options.packet_simulator_options.unpartition_probability,
         cluster.options.network_options.packet_simulator_options.partition_stability,
+        cluster.options.network_options.packet_simulator_options.unpartition_stability,
 
         cluster.options.storage_options.read_latency_min,
         cluster.options.storage_options.read_latency_mean,
